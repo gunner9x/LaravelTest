@@ -5,9 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Http\Requests;
 use App\User;
-use App\Http\Resources\User as UserResource;
 
-class UserController extends Controller
+class UserPController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -16,12 +15,11 @@ class UserController extends Controller
      */
     public function index()
     {
-        // Get users
-        $users = User::paginate(5);
-
+        // Get paginated-sortable-users collection
+        $users = User::sortable()->paginate(10);
 
         //Return
-        return UserResource::collection($users);
+        return view('users.index', compact('users'));
     }
 
     /**
@@ -31,7 +29,7 @@ class UserController extends Controller
      */
     public function create()
     {
-        //
+        return view('users.create');
     }
 
     /**
@@ -42,15 +40,17 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $user = $request->isMethod('put') ? User::findOrFail($request->user_id) : new User;
+        $request->validate([
+            'name'=>'required|alpha|max:255',
+            'email'=>'required|email',
+        ]);
 
-        $user->id = $request->input('user_id');
-        $user->name = $request->input('name');
-        $user->email = $request->input('email');
-
-        if($user->save()){
-            return new UserResource($user);
-        }
+        $user = new User([
+            'name' => $request->get('name'),
+            'email' => $request->get('email'),
+        ]);
+        $user->save();
+        return redirect('/users')->with('success', 'Added new User!');
     }
 
     /**
@@ -61,8 +61,7 @@ class UserController extends Controller
      */
     public function show($id)
     {
-        $user = User::findOrFail($id);
-        return new UserResource($user);
+
     }
 
     /**
@@ -73,7 +72,8 @@ class UserController extends Controller
      */
     public function edit($id)
     {
-        //
+        $user = User::findOrFail($id);
+        return view('users.edit',compact('user'));
     }
 
     /**
@@ -85,7 +85,17 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $request->validate([
+            'name'=>'required|alpha|max:255',
+            'email'=>'required|email',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->name = $request->get('name');
+        $user->email = $request->get('email');
+        $user->save();
+
+        return redirect('/users')->with('success','User updated!');
     }
 
     /**
@@ -97,9 +107,8 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
+        $user->delete();
 
-        if($user->delete()){
-            return new UserResource($user);
-        }
+        return redirect('/users')->with('success', 'User deleted!');
     }
 }
